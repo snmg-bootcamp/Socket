@@ -5,15 +5,14 @@
 #include <stdio.h>
 int main()
 {
-	int sockfd;
 	struct sockaddr_in dest;
 	char buffer[] = "Hello World!";
 
 	/* create socket , same as client */
-	sockfd = socket(PF_INET, SOCK_STREAM, 0);
+	int sockfd = socket(PF_INET, SOCK_STREAM, 0);
 
 	/* initialize structure dest */
-	bzero(&dest, sizeof(dest));
+	bzero(&dest,sizeof(dest));
 	dest.sin_family = PF_INET;
 	dest.sin_port = htons(8889);
 	/* this line is different from client */
@@ -30,13 +29,13 @@ int main()
 	{
 		int clientfd;
 		struct sockaddr_in client_addr;
-		int addrlen = sizeof(client_addr);
+		socklen_t addrlen = sizeof(client_addr);
 
 		/* Wait and Accept connection */
 		clientfd = accept(sockfd, (struct sockaddr*)&client_addr, &addrlen);
 
 		/* Send message */
-		send(clientfd, buffer, sizeof(buffer), 0);
+		send(clientfd, buffer, sizeof(buffer)-1, 0);
 
 		/* close(client) */
 		close(clientfd);
