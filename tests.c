@@ -1,19 +1,20 @@
 #include<stdio.h>
-#include<string.h>    //strlen
-#include<stdlib.h>    //strlen
+#include<string.h>   
+#include<stdlib.h>   
 #include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
-#include<unistd.h>    //write 
-#include<pthread.h> //for threading , link with lpthread
- 
+#include<arpa/inet.h>
+#include<unistd.h>   
+#include<pthread.h> 
+
 void *connection_handler(void *);
- 
-int main(int argc , char *argv[])
+
+int numsocket = 0,clientsocket[10];
+int main
+(int argc , char *argv[])
 {
-    int socket_desc , new_socket , c , *new_sock;
+    int socket_desc, c,read_size,i;
     struct sockaddr_in server , client;
-    char *message;
-     
+ 
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
@@ -35,64 +36,62 @@ int main(int argc , char *argv[])
     puts("bind done");
      
     //Listen
-    listen(socket_desc , 3);
+    listen(socket_desc , 10);
      
     //Accept and incoming connection
     puts("Waiting for incoming connections...");
     c = sizeof(struct sockaddr_in);
-    while( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
+    while( (clientsocket[numsocket]= accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
     {
         puts("Connection accepted");
          
         pthread_t sniffer_thread;
-        new_sock = malloc(1);
-        *new_sock = new_socket;
-         
-        if( pthread_create( &sniffer_thread , NULL ,  connection_handler , (void*) new_sock) < 0)
+        numsocket ++;
+        if( pthread_create( &sniffer_thread , NULL ,  connection_handler ,NULL) < 0)
         {
             perror("could not create thread");
             return 1;
         }
          
         //Now join the thread , so that we dont terminate before the thread
-        //pthread_join( sniffer_thread , NULL);
         puts("Handler assigned");
     }
-     
-    if (new_socket<0)
-    {
-        perror("accept failed");
-        return 1;
+    for(i = 0 ;i<numsocket;i++){
+	    if (clientsocket[i]<0)
+	    {
+	        perror("accept failed");
+	        return 1;
+	    }
     }
-     
-    return 0;
-}
 
-void *connection_handler(void *socket_desc)
-{
-    //Get the socket descriptor
-    int sock = *(int*)socket_desc;
-    int read_size;
-    char *message, client_message[2000];  
-    //Receive a message from client
-    while( (read_size = recv(sock , client_message , 2000 , 0)) > 0 )
-    {
-        //Send the message back to client
-        write(sock , client_message , strlen(client_message));
-    }
-     
-    if(read_size == 0)
-    {
-        puts("Client disconnected");
-        fflush(stdout);
-    }
-    else if(read_size == -1)
-    {
-        perror("recv failed");
-    }
-         
-    //Free the socket pointer
-    free(socket_desc);
-     
-    return 0;
+   void *connection_handler
+   (void *socket_desc)
+	{
+	  //Receive a message from client
+	        char client_message[2000];
+		    read_size = recv(clientsocket[numsocket], client_message , 2000 , 0);
+			   while(read_size> 0 )
+			   {
+			       //Send the message back to client
+			       for(i = 0 ;i<numsocket;i++)
+			       write(clientsocket[i], client_message , strlen(client_message));
+			   }   
+		    if(read_size == 0)
+		    {
+		        puts("Client disconnected");
+		        fflush(stdout);
+		    }
+		    else if(read_size == -1)
+		    {
+		        perror("recv failed");
+		    }
+		   	
+		    
+		    free(socket_desc);
+		     
+		    return 0;
+		    
+	}
 }
+                                                                    
+
