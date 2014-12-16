@@ -8,11 +8,11 @@
 
 void *connection_handler(void *);
 
-int numsocket = 0,clientsocket[10];
+int numsocket = 0,clientsocket[10],i;
 int main
 (int argc , char *argv[])
 {
-    int socket_desc, c,read_size,i;
+    int socket_desc, c;
     struct sockaddr_in server , client;
  
     //Create socket
@@ -41,18 +41,17 @@ int main
     //Accept and incoming connection
     puts("Waiting for incoming connections...");
     c = sizeof(struct sockaddr_in);
-    while( (clientsocket[numsocket]= accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
+    while( (clientsocket[numsocket]= accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) !=-1 )
     {
-        puts("Connection accepted");
-         
+       
         pthread_t sniffer_thread;
-        numsocket ++;
-        if( pthread_create( &sniffer_thread , NULL ,  connection_handler ,NULL) < 0)
+        
+        if( pthread_create( &sniffer_thread , NULL ,  connection_handler ,(void*)&clientsocket[numsocket]) < 0)
         {
             perror("could not create thread");
             return 1;
         }
-         
+        numsocket ++;
         //Now join the thread , so that we dont terminate before the thread
         puts("Handler assigned");
     }
@@ -63,18 +62,20 @@ int main
 	        return 1;
 	    }
     }
-
+}
    void *connection_handler
    (void *socket_desc)
 	{
 	  //Receive a message from client
 	        char client_message[2000];
-		    read_size = recv(clientsocket[numsocket], client_message , 2000 , 0);
-			   while(read_size> 0 )
+            int sock = *(int*)socket_desc;
+            int read_size;
+
+		   while((read_size = recv(sock, client_message , 2000 , 0))>0)
 			   {
 			       //Send the message back to client
 			       for(i = 0 ;i<numsocket;i++)
-			       write(clientsocket[i], client_message , strlen(client_message));
+			       send(clientsocket[i], client_message , strlen(client_message),0);
 			   }   
 		    if(read_size == 0)
 		    {
@@ -87,11 +88,11 @@ int main
 		    }
 		   	
 		    
-		    free(socket_desc);
+		    close(sock);
 		     
 		    return 0;
 		    
 	}
-}
+
                                                                     
 
